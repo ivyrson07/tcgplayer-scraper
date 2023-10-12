@@ -1,0 +1,50 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31912.275
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Sellers", "Sellers", "{76D0A7DE-43D7-4774-B76F-3AF224AFD730}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Expansions", "Expansions", "{76EEEFE8-E2D6-4509-86F2-A61FAA29EC14}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TCG.Scraper.Sellers", "Sellers\TCG.Scraper.Sellers\TCG.Scraper.Sellers.csproj", "{F7597CE9-F708-419C-886E-238D03A9AF22}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "BaseScraper", "BaseScraper", "{111E5E27-A9BF-4543-976C-3FB9E6299096}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TCG.Scraper", "BaseScraper\TCG.Scraper\TCG.Scraper.csproj", "{C4273659-E533-4735-9FC9-378327582C1E}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Common", "Common", "{5636CEDA-A31B-4436-84FC-94767C21A8B6}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TCG.Scraper.Common", "Common\TCG.Scraper.Common\TCG.Scraper.Common.csproj", "{28014EF3-5CF4-4F86-806D-40D8E7AAD4C1}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{F7597CE9-F708-419C-886E-238D03A9AF22}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F7597CE9-F708-419C-886E-238D03A9AF22}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F7597CE9-F708-419C-886E-238D03A9AF22}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F7597CE9-F708-419C-886E-238D03A9AF22}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C4273659-E533-4735-9FC9-378327582C1E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C4273659-E533-4735-9FC9-378327582C1E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C4273659-E533-4735-9FC9-378327582C1E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C4273659-E533-4735-9FC9-378327582C1E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{28014EF3-5CF4-4F86-806D-40D8E7AAD4C1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{28014EF3-5CF4-4F86-806D-40D8E7AAD4C1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{28014EF3-5CF4-4F86-806D-40D8E7AAD4C1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{28014EF3-5CF4-4F86-806D-40D8E7AAD4C1}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{F7597CE9-F708-419C-886E-238D03A9AF22} = {76D0A7DE-43D7-4774-B76F-3AF224AFD730}
+		{C4273659-E533-4735-9FC9-378327582C1E} = {111E5E27-A9BF-4543-976C-3FB9E6299096}
+		{28014EF3-5CF4-4F86-806D-40D8E7AAD4C1} = {5636CEDA-A31B-4436-84FC-94767C21A8B6}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {A14DE7CE-719E-4BD8-B08E-8EADA2B2DBD8}
+	EndGlobalSection
+EndGlobal
