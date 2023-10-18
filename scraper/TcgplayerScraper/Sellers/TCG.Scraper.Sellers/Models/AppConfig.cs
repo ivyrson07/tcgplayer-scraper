@@ -14,6 +14,8 @@
 
         public string SellersUrl { get; set; }
 
+        public int ScraperDelayTime { get; set; }
+
         public string GetSellersFirstPageUrl(bool isCertified, bool isDirect, bool isGoldStar, int categoryId)
         {
             var url = string.Format(SellersFirstPageUrl, isDirect, isGoldStar, isCertified, categoryId);

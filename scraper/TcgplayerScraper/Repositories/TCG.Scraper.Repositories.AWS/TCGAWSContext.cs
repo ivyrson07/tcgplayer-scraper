@@ -3,12 +3,7 @@ using Amazon.DynamoDBv2.Model;
 using Amazon.DynamoDBv2.DataModel;
 using Amazon.DynamoDBv2.DocumentModel;
 using Amazon.Runtime;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Reflection;
+using Newtonsoft.Json;
 using TCG.Scraper.Repositories.AWS.Configurations;
 using TCG.Scraper.Repositories.Entities;
 
@@ -29,14 +24,25 @@ namespace TCG.Scraper.Repositories.AWS
 
         public async Task SaveAsync<T>(T entity)
         {
-            AddCreatedTimestamps(entity);
+            await AddCreatedTimestamps(entity);
 
             await base.SaveAsync(entity);
         }
 
         public async Task SaveMultipleAsync<T>(List<T> entityList)
         {
-            await AddMultipleCreatedTimestamps(entityList);
+            List<Task> tasks = new List<Task>();
+
+            foreach (T entity in entityList)
+            {
+                tasks.Add(await Task.Factory.StartNew(async () =>
+                {
+                    await AddCreatedTimestamps(entity);
+                    await base.SaveAsync(entity);
+                }));
+            }
+
+            await Task.WhenAll(tasks);
         }
 
         private async Task AddCreatedTimestamps<T>(T entity)
@@ -48,16 +54,6 @@ namespace TCG.Scraper.Repositories.AWS
                 baseEntity.Created = DateTime.Now;
                 baseEntity.CreatedBy = Guid.Empty;
             });
-        }
-
-        private async Task AddMultipleCreatedTimestamps<T>(List<T> entityList)
-        {
-            foreach (T entity in entityList)
-            {
-                await AddCreatedTimestamps(entity);
-
-                await base.SaveAsync(entity);
-            }
         }
         
         private async Task AddModifiedTimestamps<T>(T entity)
@@ -76,8 +72,6 @@ namespace TCG.Scraper.Repositories.AWS
             foreach (T entity in entityList)
             {
                 await AddModifiedTimestamps(entity);
-
-                await base.SaveAsync(entity);
             }
         }
     }

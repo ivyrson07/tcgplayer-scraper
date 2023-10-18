@@ -39,6 +39,7 @@ namespace TCG.Scraper.Sellers.Services
             {
                 var scrapingProcessId = Guid.NewGuid();
                 var dbSavingProcessId = Guid.NewGuid();
+                var scraperDelayInMinutes = _appConfig.ScraperDelayTime / 60000;
 
                 _processTimer.ProcessStartTimer(scrapingProcessId, "Started new scraping process");
 
@@ -129,8 +130,9 @@ namespace TCG.Scraper.Sellers.Services
 
                     await Task.WhenAll(tasks);
 
-                    _logger.LogInformation("SCRAPING PROCESS PAUSED FOR 1 MINUTE. PLEASE WAIT.");
-                    await Task.Delay(60000);
+                    _logger.LogInformation($"SCRAPING PROCESS PAUSED FOR {scraperDelayInMinutes} MINUTE{(scraperDelayInMinutes > 1 ? "S" : "")}. PLEASE WAIT.");
+
+                    await Task.Delay(_appConfig.ScraperDelayTime);
                 }
 
                 _processTimer.ProcessEndTimer(scrapingProcessId, $"End of process, scraped {sellers.Count} sellers.");
