@@ -1,10 +1,16 @@
-﻿namespace TCG.Scraper.Sellers.Models
-{
-    public class Seller
-    {
-        public string FeedbackUrl { get; set; }
+﻿using Amazon.DynamoDBv2;
+using Amazon.DynamoDBv2.DataModel;
+using TCG.Scraper.Repositories.Entities;
 
+namespace TCG.Scraper.Repositories.AWS.Entities
+{
+    [DynamoDBTable("Seller")]
+    public class SellerEntity : BaseEntity
+    {
+        [DynamoDBHashKey]
         public string Id { get; set; }
+
+        public string FeedbackUrl { get; set; }
 
         public bool IsCertified { get; set; }
 

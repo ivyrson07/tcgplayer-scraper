@@ -1,10 +1,13 @@
-﻿using Microsoft.Extensions.Configuration;
+﻿using AutoMapper;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Serilog;
 using TCG.Scraper.Common;
+using TCG.Scraper.Sellers.Mappers;
 using TCG.Scraper.Sellers.Models;
 using TCG.Scraper.Sellers.Services;
+using TCG.Scraper.Repositories.AWS;
 
 namespace TCG.Scraper.Sellers
 {
@@ -43,7 +46,15 @@ namespace TCG.Scraper.Sellers
 
                     .AddSingleton<IConfiguration>(configurationProvider)
 
+                    .AddSingleton(new MapperConfiguration(cfg =>
+                    {
+                        cfg.AddProfile<SellerMapperProfile>();
+                    }).CreateMapper())
+
+                    .AddSingleton<TCGAWSContext>()
+
                     .AddSingleton<IOrchestrator, Orchestrator>()
+                    .AddSingleton<ISellersService, SellerService>()
                     .AddSingleton<IProcessTimer, ProcessTimer>()
 
                     .AddHttpClient()

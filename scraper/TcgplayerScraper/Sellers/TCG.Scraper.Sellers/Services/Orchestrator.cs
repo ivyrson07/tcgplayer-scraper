@@ -13,6 +13,7 @@ namespace TCG.Scraper.Sellers.Services
 
     public class Orchestrator : BaseScraper, IOrchestrator
     {
+        private readonly ISellersService _sellerService;
         private readonly IProcessTimer _processTimer;
 
         private readonly AppConfig _appConfig;
@@ -20,10 +21,12 @@ namespace TCG.Scraper.Sellers.Services
         private readonly ILogger<Orchestrator> _logger;
 
         public Orchestrator(
+            ISellersService sellerService,
             IProcessTimer processTimer,
             IOptions<AppConfig> appConfig,
             ILogger<Orchestrator> logger)
         {
+            _sellerService = sellerService;
             _processTimer = processTimer;
             _appConfig = appConfig.Value;
             _logger = logger;
@@ -34,9 +37,10 @@ namespace TCG.Scraper.Sellers.Services
         {
             try
             {
-                var processId = Guid.NewGuid();
+                var scrapingProcessId = Guid.NewGuid();
+                var dbSavingProcessId = Guid.NewGuid();
 
-                _processTimer.ProcessStartTimer(processId, "Started new scraping process");
+                _processTimer.ProcessStartTimer(scrapingProcessId, "Started new scraping process");
 
                 var sellers = new List<Seller>();
                 var totalPages = await GetTotalPages();
@@ -53,7 +57,8 @@ namespace TCG.Scraper.Sellers.Services
                     {
                         tasks[page - segment.Minimum] = await Task.Factory.StartNew(async () =>
                         {
-                            var doc = await LoadWebPageAsync(GetRequestUrl(page));
+                            var requestUrl = GetRequestUrl(page);
+                            var doc = await LoadWebPageAsync(requestUrl);
 
                             var sellersDiv = doc.DocumentNode
                                 .SelectNodes("//div[contains(@class, 'scWrapper')]");
@@ -63,6 +68,7 @@ namespace TCG.Scraper.Sellers.Services
                                 var seller = new Seller
                                 {
                                     FeedbackUrl = $"{_appConfig.BaseUrl}",
+                                    Id = "",
                                     IsCertified = false,
                                     IsDirect = false,
                                     IsGold = false,
@@ -84,6 +90,8 @@ namespace TCG.Scraper.Sellers.Services
                                     seller.FeedbackUrl += feedbackAnchor
                                         .Attributes["href"]
                                         .Value;
+
+                                    seller.Id = Trimmer.GetRemainingString(seller.FeedbackUrl, "sellerfeedback/");
                                 }
 
                                 var sellerInfo = div
@@ -125,7 +133,13 @@ namespace TCG.Scraper.Sellers.Services
                     await Task.Delay(60000);
                 }
 
-                _processTimer.ProcessEndTimer(processId, $"End of process, scraped {sellers.Count} sellers.");
+                _processTimer.ProcessEndTimer(scrapingProcessId, $"End of process, scraped {sellers.Count} sellers.");
+
+                _processTimer.ProcessStartTimer(dbSavingProcessId, $"Saving sellers list to DynamoDB.");
+
+                await _sellerService.CreateSeller(sellers);
+
+                _processTimer.ProcessEndTimer(dbSavingProcessId, $"End of process, execution of _sellerService.CreateSeller(sellers) done.");
             }
             catch (Exception ex)
             {
@@ -149,9 +163,7 @@ namespace TCG.Scraper.Sellers.Services
                         .Attributes["href"]
                         .Value;
 
-                    var keyword = "page=";
-                    var startIndex = href.IndexOf(keyword) + keyword.Length;
-                    var totalPages = Convert.ToInt32(href.Substring(startIndex));
+                    var totalPages = Convert.ToInt32(Trimmer.GetRemainingString(href, "page="));
 
                     return totalPages;
                 }
