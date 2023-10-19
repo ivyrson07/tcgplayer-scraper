@@ -39,11 +39,11 @@ namespace TCG.Scraper.Sellers.Services
             {
                 var scrapingProcessId = Guid.NewGuid();
                 var dbSavingProcessId = Guid.NewGuid();
-                var scraperDelayInMinutes = _appConfig.ScraperDelayTime / 60000;
 
                 _processTimer.ProcessStartTimer(scrapingProcessId, "Started new scraping process");
 
                 var sellers = new List<Seller>();
+                var sellersCount = 0;
                 var totalPages = await GetTotalPages();
 
                 _logger.LogInformation($"Total Pages : {totalPages}");
@@ -56,92 +56,115 @@ namespace TCG.Scraper.Sellers.Services
 
                     for (var page = segment.Minimum; page <= segment.Maximum; page++)
                     {
-                        tasks[page - segment.Minimum] = await Task.Factory.StartNew(async () =>
+                        var taskExecutionSuccess = false;
+                        var task = Task.CompletedTask;
+
+                        try
                         {
-                            var requestUrl = GetRequestUrl(page);
-                            var doc = await LoadWebPageAsync(requestUrl);
-
-                            var sellersDiv = doc.DocumentNode
-                                .SelectNodes("//div[contains(@class, 'scWrapper')]");
-
-                            foreach (var div in sellersDiv)
+                            task = await Task.Factory.StartNew(async () =>
                             {
-                                var seller = new Seller
+                                var requestUrl = GetRequestUrl(page);
+                                var doc = await LoadWebPageAsync(requestUrl);
+
+                                var sellersDiv = doc.DocumentNode
+                                    .SelectNodes("//div[contains(@class, 'scWrapper')]");
+
+                                foreach (var div in sellersDiv)
                                 {
-                                    FeedbackUrl = $"{_appConfig.BaseUrl}",
-                                    Id = "",
-                                    IsCertified = false,
-                                    IsDirect = false,
-                                    IsGold = false,
-                                    Listings = new List<string>(),
-                                    Location = "",
-                                    Name = "",
-                                    Ratings = ""
-                                };
+                                    var seller = new Seller
+                                    {
+                                        FeedbackUrl = $"{_appConfig.BaseUrl}",
+                                        Id = "",
+                                        IsCertified = false,
+                                        IsDirect = false,
+                                        IsGold = false,
+                                        Listings = new List<string>(),
+                                        Location = "",
+                                        Name = "",
+                                        Ratings = ""
+                                    };
 
-                                var feedbackAnchor = div
-                                    .SelectSingleNode(".//div[contains(@class, 'scTitle largetext')]//a[1]");
+                                    var feedbackAnchor = div
+                                        .SelectSingleNode(".//div[contains(@class, 'scTitle largetext')]//a[1]");
 
-                                if (feedbackAnchor != null)
-                                {
-                                    seller.Name = feedbackAnchor
-                                        .InnerText
-                                        .Replace("&amp;", "&");
+                                    if (feedbackAnchor != null)
+                                    {
+                                        seller.Name = feedbackAnchor
+                                            .InnerText
+                                            .Replace("&amp;", "&");
 
-                                    seller.FeedbackUrl += feedbackAnchor
-                                        .Attributes["href"]
-                                        .Value;
+                                        seller.FeedbackUrl += feedbackAnchor
+                                            .Attributes["href"]
+                                            .Value;
 
-                                    seller.Id = Trimmer.GetRemainingString(seller.FeedbackUrl, "sellerfeedback/");
+                                        seller.Id = Trimmer.GetRemainingString(seller.FeedbackUrl, "sellerfeedback/");
+                                    }
+
+                                    var sellerInfo = div
+                                        .SelectSingleNode(".//div[contains(@class, 'scPrice')]")
+                                        .InnerHtml
+                                        .Replace("/", "")
+                                        .Replace(" ", "")
+                                        .Replace("\r", "")
+                                        .Replace("\n", "")
+                                        .Split("<br>");
+
+                                    seller.Location = sellerInfo[0].Replace("Location:", "");
+                                    seller.Listings = sellerInfo[1]
+                                        .Replace("Listings:", "")
+                                        .Split(",")
+                                        .Where(x => x != "")
+                                        .ToList();
+
+                                    var sellerBadge = div.SelectSingleNode(".//div[contains(@class, 'iconLineContainer')]");
+
+                                    if (sellerBadge != null)
+                                    {
+                                        seller.IsCertified = sellerBadge.SelectSingleNode(".//span[contains(@class, 'iconCertified')]") != null;
+                                        seller.IsDirect = sellerBadge.SelectSingleNode(".//span[contains(@class, 'iconDirect')]") != null;
+                                        seller.IsGold = sellerBadge.SelectSingleNode(".//span[contains(@class, 'iconGold')]") != null;
+                                        seller.Ratings = sellerBadge.SelectSingleNode(".//span[contains(text(), 'Rating')]").InnerText;
+                                    }
+
+                                    sellers.Add(seller);
+
+                                    _logger.LogInformation($"Scraped seller : {seller.Name} - {seller.Location} - {seller.Ratings}");
+
+                                    _processTimer.ProcessStartTimer(dbSavingProcessId, $"Saving {seller.Name} to DynamoDB.");
+
+                                    await _sellerService.CreateSeller(seller);
+
+                                    _processTimer.ProcessEndTimer(dbSavingProcessId, $"End of process, execution of _sellerService.CreateSeller(sellers) done.");
                                 }
+                            });
 
-                                var sellerInfo = div
-                                    .SelectSingleNode(".//div[contains(@class, 'scPrice')]")
-                                    .InnerHtml
-                                    .Replace("/", "")
-                                    .Replace(" ", "")
-                                    .Replace("\r", "")
-                                    .Replace("\n", "")
-                                    .Split("<br>");
+                            taskExecutionSuccess = true;
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError(ex.Message);
 
-                                seller.Location = sellerInfo[0].Replace("Location:", "");
-                                seller.Listings = sellerInfo[1]
-                                    .Replace("Listings:", "")
-                                    .Split(",")
-                                    .Where(x => x != "")
-                                    .ToList();
+                            await DelayScraping();
 
-                                var sellerBadge = div.SelectSingleNode(".//div[contains(@class, 'iconLineContainer')]");
+                            taskExecutionSuccess = await Retry(task);
+                        }
 
-                                if (sellerBadge != null)
-                                {
-                                    seller.IsCertified = sellerBadge.SelectSingleNode(".//span[contains(@class, 'iconCertified')]") != null;
-                                    seller.IsDirect = sellerBadge.SelectSingleNode(".//span[contains(@class, 'iconDirect')]") != null;
-                                    seller.IsGold = sellerBadge.SelectSingleNode(".//span[contains(@class, 'iconGold')]") != null;
-                                    seller.Ratings = sellerBadge.SelectSingleNode(".//span[contains(text(), 'Rating')]").InnerText;
-                                }
-
-                                sellers.Add(seller);
-
-                                _logger.LogInformation($"Scraped seller : {seller.Name} - {seller.Location} - {seller.Ratings}");
-                            }
-                        });
+                        if (taskExecutionSuccess)
+                        {
+                            tasks[page - segment.Minimum] = task;
+                        }
+                        else
+                        {
+                            tasks[page - segment.Minimum] = Task.CompletedTask;
+                        }
                     }
 
                     await Task.WhenAll(tasks);
 
-                    _logger.LogInformation($"SCRAPING PROCESS PAUSED FOR {scraperDelayInMinutes} MINUTE{(scraperDelayInMinutes > 1 ? "S" : "")}. PLEASE WAIT.");
-
-                    await Task.Delay(_appConfig.ScraperDelayTime);
+                    await DelayScraping();
                 }
 
-                _processTimer.ProcessEndTimer(scrapingProcessId, $"End of process, scraped {sellers.Count} sellers.");
-
-                _processTimer.ProcessStartTimer(dbSavingProcessId, $"Saving sellers list to DynamoDB.");
-
-                await _sellerService.CreateSeller(sellers);
-
-                _processTimer.ProcessEndTimer(dbSavingProcessId, $"End of process, execution of _sellerService.CreateSeller(sellers) done.");
+                _processTimer.ProcessEndTimer(scrapingProcessId, $"End of process, scraped {sellersCount} sellers.");
             }
             catch (Exception ex)
             {
@@ -191,6 +214,15 @@ namespace TCG.Scraper.Sellers.Services
             {
                 return _appConfig.GetSellersFirstPageUrl(isCertified, isDirect, isGoldStar, categoryId);
             }
+        }
+
+        private async Task DelayScraping()
+        {
+            var scraperDelayInMinutes = _appConfig.ScraperDelayTime / 60000;
+
+            _logger.LogInformation($"SCRAPING PROCESS PAUSED FOR {scraperDelayInMinutes} MINUTE{(scraperDelayInMinutes > 1 ? "S" : "")}. PLEASE WAIT.");
+
+            await Task.Delay(_appConfig.ScraperDelayTime);
         }
     }
 }

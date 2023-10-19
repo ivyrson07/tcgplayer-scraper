@@ -48,5 +48,30 @@ namespace TCG.Scraper
             }
 
         }
+
+        public async Task<bool> Retry(Task task)
+        {
+            var retryCount = 1;
+
+            while (retryCount <= 5)
+            {
+                try
+                {
+                    _logger.LogWarning($"Re-execute task, retry: {retryCount}");
+
+                    await task;
+
+                    return true;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex.Message);
+
+                    retryCount++;
+                }
+            }
+
+            return false;
+        }
     }
 }

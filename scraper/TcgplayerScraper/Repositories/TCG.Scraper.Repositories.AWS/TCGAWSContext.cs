@@ -29,22 +29,6 @@ namespace TCG.Scraper.Repositories.AWS
             await base.SaveAsync(entity);
         }
 
-        public async Task SaveMultipleAsync<T>(List<T> entityList)
-        {
-            List<Task> tasks = new List<Task>();
-
-            foreach (T entity in entityList)
-            {
-                tasks.Add(await Task.Factory.StartNew(async () =>
-                {
-                    await AddCreatedTimestamps(entity);
-                    await base.SaveAsync(entity);
-                }));
-            }
-
-            await Task.WhenAll(tasks);
-        }
-
         private async Task AddCreatedTimestamps<T>(T entity)
         {
             await Task.Factory.StartNew(() =>
@@ -65,14 +49,6 @@ namespace TCG.Scraper.Repositories.AWS
                 baseEntity.Modified = DateTime.Now;
                 baseEntity.ModifiedBy = Guid.Empty;
             });
-        }
-        
-        private async Task AddMultipleModifiedTimestamps<T>(IEnumerable<T> entityList)
-        {
-            foreach (T entity in entityList)
-            {
-                await AddModifiedTimestamps(entity);
-            }
         }
     }
 }

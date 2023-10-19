@@ -14,8 +14,6 @@ namespace TCG.Scraper.Sellers.Services
     public interface ISellersService
     {
         Task CreateSeller(Seller seller);
-
-        Task CreateSeller(List<Seller> seller);
     }
 
     public class SellerService : ISellersService
@@ -41,13 +39,6 @@ namespace TCG.Scraper.Sellers.Services
             var entity = _mapper.Map<SellerEntity>(seller);
 
             await _tcgAwsContext.SaveAsync(entity);
-        }
-
-        public async Task CreateSeller(List<Seller> sellers)
-        {
-            var entity = _mapper.Map<List<SellerEntity>>(sellers);
-
-            await _tcgAwsContext.SaveMultipleAsync(entity);
         }
     }
 }
